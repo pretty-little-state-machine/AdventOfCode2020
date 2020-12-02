@@ -1,6 +1,7 @@
 defmodule AoC2020 do
   def get_valid_rule_1(path, rule) do
     {:ok, data} = File.read(path)
+
     data
     |> String.split("\n", trim: true)
     |> Enum.filter(rule)
