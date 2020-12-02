@@ -41,6 +41,6 @@ AoC2020.get_valid_rule_1("files/day_2_input.txt", &AoC2020.is_valid_rule_1?/1)
 |> Enum.count()
 |> IO.puts()
 
-AoC2020.get_valid_rule_1("files/day_2_input.txt", &AoC2020.is_valid_rule_2?/1)
+AoC2020.get_valid_rule_2("files/day_2_input.txt", &AoC2020.is_valid_rule_2?/1)
 |> Enum.count()
 |> IO.puts()
