@@ -1,5 +1,5 @@
 defmodule AoC2020 do
-  def get_valid_rule_1(path, rule) do
+  def get_valid(path, rule) do
     {:ok, data} = File.read(path)
 
     data
@@ -37,10 +37,10 @@ defmodule AoC2020 do
   defp xor(_a, _b), do: false
 end
 
-AoC2020.get_valid_rule_1("files/day_2_input.txt", &AoC2020.is_valid_rule_1?/1)
+AoC2020.get_valid("files/day_2_input.txt", &AoC2020.is_valid_rule_1?/1)
 |> Enum.count()
 |> IO.puts()
 
-AoC2020.get_valid_rule_2("files/day_2_input.txt", &AoC2020.is_valid_rule_2?/1)
+AoC2020.get_valid("files/day_2_input.txt", &AoC2020.is_valid_rule_2?/1)
 |> Enum.count()
 |> IO.puts()
