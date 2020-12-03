@@ -1,4 +1,4 @@
-      * Sample COBOL program
+      * Advent of Code 2020
        IDENTIFICATION DIVISION.
        PROGRAM-ID. advent-of-code-day-03.
        ENVIRONMENT DIVISION.
@@ -16,12 +16,10 @@
        WORKING-STORAGE SECTION. 
        01  MAP-TOPO.
            05 FIELD PIC A(31).
-       01  MOVEMENT-SELECTOR PIC 9(02) VALUE 0.
        01  COORD-X PIC 9(02) VALUE 1.
        01  ITEM PIC X(01).
        01  TREES PIC 9(03) VALUE 0.
        01  FILE-STATUS PIC 9 VALUE 0.
-       01  FIRST-LINE PIC 9 VALUE 1.
 
        PROCEDURE DIVISION.
            OPEN INPUT MAP.
