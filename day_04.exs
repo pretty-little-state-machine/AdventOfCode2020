@@ -74,20 +74,26 @@ defmodule Advent do
   end
 
   def is_in_range_inc_old?(value, min, max) do
-    int = case Integer.parse(value) do
-      {num, ""} -> {:ok, num}
-      {_, _} -> {:error, :unparsable}
-      :error -> {:error, :unparsable}
-    end
+    int =
+      case Integer.parse(value) do
+        {num, ""} -> {:ok, num}
+        {_, _} -> {:error, :unparsable}
+        :error -> {:error, :unparsable}
+      end
 
     case int do
-      {:ok, num } -> cond do
-        num >= min -> true
-        num <= max -> true
-        true -> false
-      end
-      {:error, _} -> false
-      {_, _} -> false
+      {:ok, num} ->
+        cond do
+          num >= min -> true
+          num <= max -> true
+          true -> false
+        end
+
+      {:error, _} ->
+        false
+
+      {_, _} ->
+        false
     end
   end
 end
@@ -98,11 +104,12 @@ req_fields = ["byr", "iyr", "eyr", "hgt", "hcl", "ecl", "pid"]
 # Process
 input
 |> String.split("\n\n")
-|> Enum.map(fn x -> String.replace(x, "\n" , " ") end)
+|> Enum.map(fn x -> String.replace(x, "\n", " ") end)
 |> Enum.map(fn x -> Advent.datastring_to_map(x) end)
 |> Enum.filter(fn x ->
-  Enum.all?(req_fields, fn(y) -> Map.has_key?(x, y) end)
+  Enum.all?(req_fields, fn y -> Map.has_key?(x, y) end)
 end)
-|> Enum.filter(fn x -> Advent.is_valid?(x) == true end) # Part II only.
+# Part II only.
+|> Enum.filter(fn x -> Advent.is_valid?(x) == true end)
 |> Enum.count()
 |> IO.puts()
