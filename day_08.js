@@ -639,6 +639,7 @@ class Cpu {
             let [opcode, value] = inst.split(" ")
             this.memory.push({ opcode: opcode, value: parseInt(value), num_execs: 0 })
         });
+        return this;
     }
 
     flip_nop_jump(idx) {
@@ -647,19 +648,16 @@ class Cpu {
         } else if (this.memory[idx].opcode === "jmp") {
             this.memory[idx].opcode = "nop"
         }
+        return this
     }
 
     run() {
-        if (this.pc > this.memory.length) {
-            return { status: ":error", msg: "Memory access violation: PC:" + this.pc }
-        }
-
         if (this.pc == this.memory.length) {
             return { status: ":done", msg: "Run complete. Accumulator: " + this.acc }
         }
 
-        this.memory[this.pc].num_execs += 1 // Check for loops
-
+        this.memory[this.pc].num_execs += 1
+        
         if (this.memory[this.pc].num_execs > 1) {
             return { status: ":error", msg: this.dump_breakpoint() }
         }
@@ -696,7 +694,7 @@ class Cpu {
 
 // Part I - Break
 let c = new Cpu;
-c.load_program(input)
+c.load_program(input).run()
 let r = c.run()
 while (":running" === r.status) {
     r = c.run()
@@ -705,24 +703,14 @@ console.log("Part 1 - ", r.msg)
 
 // Brute-Force on Part II
 let opcode_flip_idx = 0
-function brute_force() {
-    if (opcode_flip_idx >= input.split("\n").length - 1) {
-        console.log("Flipped all possible nop/jmps - aborting")
-        return
-    }
-    c.load_program(input) // Reset the CPU
-    c.flip_nop_jump(opcode_flip_idx)
-    opcode_flip_idx += 1
-    let r = c.run()
-    while (":running" === r.status) {
-        r = c.run()
-    }
-    if (":error" === r.status) {
-        brute_force()
-    }
+while(true) {
+    let r = c.load_program(input).flip_nop_jump(opcode_flip_idx).run()
+    while (":running" === r.status) { r = c.run() }
+
     if (":done" === r.status) {
         console.log("Part 2 - Flipped nop/jmp at " + opcode_flip_idx)
         console.log(r.msg)
+        break;
     }
+    opcode_flip_idx += 1 // Try the next one...
 }
-brute_force() // heat up the room
