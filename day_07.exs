@@ -1,6 +1,7 @@
 defmodule Advent do
   def part_1(input) do
     bag_rules = parse_input(input)
+
     [graph, verts] = run_digraph(bag_rules)
     count_num_paths_to_color(bag_rules, graph, verts, "shiny gold")
   end
@@ -10,8 +11,20 @@ defmodule Advent do
     sum_child_bags(1, bag_rules, "shiny gold") - 1
   end
 
+  defp sum_child_bags(mul, bag_rules, bag_color) do
+    cur_bag = Enum.find(bag_rules, fn x -> x.color == bag_color end)
+
+    sum =
+      Enum.reduce(cur_bag.holds, 1, fn x, a ->
+        a + sum_child_bags(x.count, bag_rules, x.color)
+      end)
+
+    mul * sum
+  end
+
   defp parse_input(input) do
     input
+    |> String.replace("\r", "")
     |> String.split("\n")
     |> Enum.map(fn x -> parse_line(x) end)
   end
@@ -76,16 +89,6 @@ defmodule Advent do
     end)
   end
 
-  defp sum_child_bags(mul, bag_rules, bag_color) do
-    seek_bag = bag_rules |> Enum.find(fn x -> x.color == bag_color end)
-
-    sum =
-      seek_bag.holds
-      |> Enum.reduce(1, fn x, a -> a + sum_child_bags(x.count, bag_rules, x.color) end)
-
-    mul * sum
-  end
-
   defp has_path?(graph, v1, v2) do
     false != :digraph.get_short_path(graph, v1, v2)
   end
@@ -96,4 +99,4 @@ part_1 = Advent.part_1(input)
 IO.puts("Part 1: #{part_1}")
 
 part_2 = Advent.part_2(input)
-IO.puts("Part 1: #{part_2}")
+IO.puts("Part 2: #{part_2}")
