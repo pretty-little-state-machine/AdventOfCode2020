@@ -16,7 +16,7 @@ defmodule Advent do
 
     possibilities =
       for v <- contigs do
-        floor((v - 1) * (v - 1 + 1) / 2 + 1)
+        floor((v - 1) * v / 2 + 1)
       end
       |> Enum.reduce(1, fn x, acc -> x * acc end)
   end
