@@ -1,17 +1,18 @@
 defmodule Advent do
-  @ram_size 65_535
-
   def part_1(input) do
-    ram = List.duplicate(0, @ram_size)
-
-    Enum.reduce(input, ram, fn x, acc ->
+    Enum.reduce(input, %{}, fn x, acc ->
       Enum.reduce(
         x.ops,
         acc,
         fn o, o_acc ->
-          List.replace_at(o_acc, o.addr, run_bitmask_pt1(o.val, x.mask))
+          Map.put(o_acc, o.addr, run_bitmask_pt1(o.val, x.mask))
         end
       )
+    end)
+    |> Enum.to_list()
+    |> Enum.map(fn x ->
+      {_, v} = x
+      v
     end)
     |> Enum.sum()
   end
@@ -34,24 +35,78 @@ defmodule Advent do
     |> String.to_integer(2)
   end
 
+  def part_2(input) do
+    Enum.reduce(input, %{}, fn x, acc ->
+      Enum.reduce(
+        x.ops,
+        acc,
+        fn o, o_acc ->
+          addrs = run_bitmask_pt2(o.addr, x.mask)
+
+          Enum.reduce(addrs, o_acc, fn a, a_acc -> Map.put(a_acc, a, o.val) end)
+        end
+      )
+    end)
+    |> Enum.to_list()
+    |> Enum.map(fn x ->
+      {_, v} = x
+      v
+    end)
+    |> Enum.sum()
+  end
+
   def run_bitmask_pt2(addr, mask) do
     binary = Integer.to_string(addr, 2) |> String.graphemes()
     padding = String.duplicate("0", 36 - Kernel.length(binary)) |> String.graphemes()
 
     zip = Enum.zip(padding ++ binary, String.graphemes(mask))
 
-    for z <- zip, into: "" do
-      {val, mask} = z
+    round_1 =
+      for z <- zip, into: "" do
+        {val, mask} = z
 
-      cond do
-        mask == "X" -> "F"
-        mask == "1" -> "1"
-        mask == "0" -> val
+        cond do
+          mask == "X" -> "X"
+          mask == "1" -> "1"
+          mask == "0" -> val
+        end
       end
-    end
-    |> IO.inspect()
 
-    # |> String.to_integer(2)
+    offsets =
+      round_1
+      |> String.graphemes()
+      |> Enum.with_index()
+      |> Enum.filter(fn x ->
+        {v, _} = x
+        "X" == v
+      end)
+      |> Enum.map(fn x ->
+        {_, idx} = x
+        idx
+      end)
+
+    build_maps(round_1, offsets, [])
+    |> Enum.uniq()
+    |> Enum.map(fn x -> String.to_integer(x, 2) end)
+  end
+
+  def build_maps(_, [], acc), do: acc
+
+  def build_maps(mask, offsets, _) do
+    {offset, new_offsets} = List.pop_at(offsets, 0)
+
+    addr_0 = replace_in_mask(mask, offset, 0)
+    addr_1 = replace_in_mask(mask, offset, 1)
+
+    build_maps(addr_0, new_offsets, [addr_0, addr_1]) ++
+      build_maps(addr_1, new_offsets, [addr_0, addr_1])
+  end
+
+  defp replace_in_mask(mask, idx, val) do
+    mask
+    |> String.graphemes()
+    |> List.replace_at(idx, val)
+    |> Enum.join("")
   end
 
   @doc """
@@ -104,5 +159,5 @@ end
 p1 = Advent.parse_input(input) |> Advent.part_1()
 IO.puts("Part 1: #{p1}")
 
-# p2 = Advent.parse_input_part_2(input) |> Advent.part_2()
-# IO.puts("Part 2: #{p2}")
+p2 = Advent.parse_input(input) |> Advent.part_2()
+IO.puts("Part 2: #{p2}")
