@@ -11,7 +11,7 @@ defmodule Advent do
   def part_2(data) do
     valid_tickets = Enum.filter(data.nearby_tickets, fn t -> is_valid?(data.rules, t) end)
 
-    cols =
+    fields =
       Enum.zip(valid_tickets)
       |> Enum.map(fn x -> %{vals: Tuple.to_list(x)} end)
       |> Enum.map(fn c ->
@@ -19,27 +19,26 @@ defmodule Advent do
           if matches_rule?(r, c.vals), do: acc ++ [r.name], else: acc
         end)
       end)
-      |> Enum.sort_by(&Kernel.length/1)
-      |> Z.debug()
-  end
+      |> Enum.with_index()
+      |> Enum.map(fn x -> %{valid: elem(x, 0), col_id: elem(x, 1)} end)
+      |> Enum.sort_by(fn x -> {Kernel.length(x.valid), x.valid} end)
+      |> Enum.reduce(%{fields: %{}, seen: []}, fn x, acc ->
+        field = (x.valid -- acc.seen) |> List.first()
+        %{fields: Map.put(acc.fields, x.col_id, field), seen: acc.seen ++ [field]}
+      end)
+      |> Map.get(:fields)
 
-  defp is_valid?(rules, ticket) do
-    r = collapse_rules(rules)
-
-    Enum.all?(ticket, fn x ->
-      x in r
-    end)
-  end
-
-  defp matches_rule?(rule, list) do
-    Enum.all?(list, fn x ->
-      x in rule.vals
+    fields
+    |> Enum.filter(&String.contains?(elem(&1, 1), "departure"))
+    |> Enum.map(&elem(&1, 0))
+    |> Enum.reduce(1, fn x, acc ->
+      acc * Enum.at(data.your_ticket, x)
     end)
   end
 
   def parse_input(file) do
     [rules, your_ticket, near_tickets] =
-      Z.file_to_list("files/day_16_input.txt")
+      Z.file_to_list(file)
       |> Z.chunk_filter_values("")
 
     %{
@@ -70,19 +69,23 @@ defmodule Advent do
   end
 
   defp collapse_tickets(tickets) do
-    Enum.reduce(tickets, [], fn t, acc ->
-      acc ++ t
-    end)
+    Enum.reduce(tickets, [], fn t, acc -> acc ++ t end)
   end
 
   defp collapse_rules(rules) do
-    Enum.reduce(rules, [], fn x, acc ->
-      acc ++ x.vals
-    end)
+    Enum.reduce(rules, [], fn x, acc -> acc ++ x.vals end)
+  end
+
+  defp is_valid?(rules, ticket) do
+    r = collapse_rules(rules)
+    Enum.all?(ticket, fn x -> x in r end)
+  end
+
+  defp matches_rule?(rule, list) do
+    Enum.all?(list, fn x -> x in rule.vals end)
   end
 end
 
 data = Advent.parse_input("files/day_16_input.txt")
-# IO.puts("Part 1: #{Advent.part_1(data.rules, data.nearby_tickets)}")
-Advent.part_2(data)
-# Advent.parse_near_tickets(near_tickets) |> IO.inspect()
+IO.puts("Part 1: #{Advent.part_1(data.rules, data.nearby_tickets)}")
+IO.puts("Part 2: #{Advent.part_2(data)}")
