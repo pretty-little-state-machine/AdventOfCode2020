@@ -9,26 +9,22 @@ defmodule Advent do
   end
 
   def part_2(data) do
-    valid_tickets = Enum.filter(data.nearby_tickets, fn t -> is_valid?(data.rules, t) end)
-
-    fields =
-      Enum.zip(valid_tickets)
-      |> Enum.map(fn x -> %{vals: Tuple.to_list(x)} end)
-      |> Enum.map(fn c ->
-        Enum.reduce(data.rules, [], fn r, acc ->
-          if matches_rule?(r, c.vals), do: acc ++ [r.name], else: acc
-        end)
+    Enum.filter(data.nearby_tickets, fn t -> is_valid?(data.rules, t) end)
+    |> Enum.zip()
+    |> Enum.map(fn x -> %{vals: Tuple.to_list(x)} end)
+    |> Enum.map(fn c ->
+      Enum.reduce(data.rules, [], fn r, acc ->
+        if matches_rule?(r, c.vals), do: acc ++ [r.name], else: acc
       end)
-      |> Enum.with_index()
-      |> Enum.map(fn x -> %{valid: elem(x, 0), col_id: elem(x, 1)} end)
-      |> Enum.sort_by(fn x -> {Kernel.length(x.valid), x.valid} end)
-      |> Enum.reduce(%{fields: %{}, seen: []}, fn x, acc ->
-        field = (x.valid -- acc.seen) |> List.first()
-        %{fields: Map.put(acc.fields, x.col_id, field), seen: acc.seen ++ [field]}
-      end)
-      |> Map.get(:fields)
-
-    fields
+    end)
+    |> Enum.with_index()
+    |> Enum.map(fn x -> %{valid: elem(x, 0), col_id: elem(x, 1)} end)
+    |> Enum.sort_by(fn x -> {Kernel.length(x.valid), x.valid} end)
+    |> Enum.reduce(%{fields: %{}, seen: []}, fn x, acc ->
+      field = (x.valid -- acc.seen) |> List.first()
+      %{fields: Map.put(acc.fields, x.col_id, field), seen: acc.seen ++ [field]}
+    end)
+    |> Map.get(:fields)
     |> Enum.filter(&String.contains?(elem(&1, 1), "departure"))
     |> Enum.map(&elem(&1, 0))
     |> Enum.reduce(1, fn x, acc ->
