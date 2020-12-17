@@ -1,14 +1,71 @@
 defmodule ZoeysHelpers do
   @doc """
+  Identical to IO.inspect()/1 with some useful flags set.
+  """
+  def debug(input) do
+    IO.inspect(input, limit: :infinity, charlists: :aslist)
+  end
+
+  @doc """
   Reads in a file and returns a list of strings seperated by newlines.
   """
   def file_to_list(file) do
-    {:ok, input} =
-      File.read(file)
-      |> String.replace("\r", "")
-      |> String.split("\n")
+    {:ok, input} = File.read(file)
 
     input
+    |> String.replace("\r", "")
+    |> String.split("\n")
+  end
+
+  @doc """
+  Takes a list of <T> and returns the number of values found.
+
+  Example:
+  a = [1, 2, 3, 2, 3, 4]
+  num_in(a, 2)
+
+  2
+  """
+  def num_in(input, value) do
+    n = Enum.frequencies(input) |> Map.get(value)
+
+    if n == nil, do: 0, else: n
+  end
+
+  @doc """
+  Finds the index of the last occurance of an item in a list.
+
+  Example:
+  a = ["x","c","g","l","m", "l", "x"]
+  rev_find_index(a, "l")
+
+  5
+  """
+  def rev_find_index(input, value) do
+    input |> Enum.reverse() |> Enum.find_index(value)
+  end
+
+  @doc """
+  Converts a delimited string into a list of integers. The input
+  string may also be the first value in another list.
+
+  Example:
+  a = "1,0,15,2,10,13"
+  map_integers(a, ",")
+
+  [1, 0, 15, 2, 10, 13]
+  """
+  def map_integers(input, delimiter) when Kernel.is_list(input) do
+    input
+    |> List.first()
+    |> String.split(delimiter)
+    |> Enum.map(fn x -> String.to_integer(x) end)
+  end
+
+  def map_integers(input, delimiter) do
+    input
+    |> String.split(delimiter)
+    |> Enum.map(fn x -> String.to_integer(x) end)
   end
 
   @doc """
