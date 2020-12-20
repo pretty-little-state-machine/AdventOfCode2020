@@ -7,6 +7,13 @@ defmodule ZoeysHelpers do
   end
 
   @doc """
+  Transposes a matrix, flipping the rows and columns
+  """
+  def transpose(matrix) do
+    List.zip(matrix) |> Enum.map(&Tuple.to_list(&1))
+  end
+
+  @doc """
   Reads in a file and returns a list of strings seperated by newlines.
   """
   def file_to_list(file) do
@@ -89,6 +96,29 @@ defmodule ZoeysHelpers do
       idx
     end)
   end
+
+  def tuple_to_map(tuple) do
+    Enum.reduce(tuple, %{}, fn {k, v}, acc ->
+      Map.put(acc, k, v)
+    end)
+  end
+
+  def permutations(lists) when Kernel.length(lists) == 2 do
+    [list_a, list_b] = lists
+
+    if is_list(list_a) and is_list(list_b) do
+      z = for x <- list_a, y <- list_b, x != y, do: [x, y]
+      r1 = Enum.map(z, fn x -> List.flatten(x) end)
+
+      z = for x <- list_b, y <- list_a, x != y, do: [x, y]
+      r2 = Enum.map(z, fn x -> List.flatten(x) end)
+      r1 ++ r2
+    else
+      lists
+    end
+  end
+
+  def permutations(lists), do: lists
 
   @doc """
   Chunks a list on a given value and returns the number of entries
