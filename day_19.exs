@@ -3,12 +3,38 @@ alias ZoeysHelpers, as: Z
 
 defmodule Advent do
   def part_1() do
-    [raw_input, regex] = parse_input("files/day_19_input.txt")
+    [raw_rules, raw_input] = Z.file_to_list("files/day_19_input.txt") |> Z.chunk_filter_values("")
+
+    regex = parse_rules(raw_rules) |> build()
 
     raw_input
-    |> Enum.reduce(0, fn x, acc ->
-      acc + if Regex.match?(regex, x), do: 1, else: 0
+    |> Enum.reduce(%{}, fn x, acc ->
+      Map.put(acc, x, Regex.match?(regex, x))
     end)
+    |> Enum.filter(fn {_, v} -> v == true end)
+    |> Enum.count()
+    |> Z.debug()
+  end
+
+  def part_2() do
+    [raw_rules, raw_input] = Z.file_to_list("files/day_19_input.txt") |> Z.chunk_filter_values("")
+
+    regex =
+      raw_rules
+      |> parse_rules()
+      |> Map.put(8, "(( 42 | 42 8 ))")
+      |> Map.put(11, "(( 42 31 | 42 11 31 ))")
+      |> build()
+
+    raw_input
+    |> Enum.reduce(%{}, fn x, acc ->
+      case :re2.run(x, regex) do
+        {:match, _} -> Map.put(acc, x, true)
+        :nomatch -> acc
+      end
+    end)
+    |> Enum.count()
+    |> Z.debug()
   end
 
   def parse_input(file) do
@@ -18,10 +44,11 @@ defmodule Advent do
     [raw_input, regex]
   end
 
-  # End case for build, clean it and pop into a regex sigil with ^/$
+  # End case for build without loops, clean it and pop into a regex sigil with ^/$
   def build(rules) when map_size(rules) == 1 do
     r = rules |> Map.get("0") |> String.replace(" ", "")
-    ~r/^#{r}$/
+    {:ok, c} = :re2.compile("^#{r}$")
+    c
   end
 
   def build(rules) do
@@ -38,6 +65,8 @@ defmodule Advent do
             String.replace(la, " #{lk} ", " #{lv} ")
             |> String.replace(" #{lk} ", " #{lv} ")
           end)
+          # Clean up any self-referencing rules with fakes
+          |> String.replace(" #{rk} ", spoof_recursive(rk))
 
         Map.put(ra, rk, nv)
       end)
@@ -46,6 +75,22 @@ defmodule Advent do
 
     build(new_rules)
   end
+
+  defp spoof_recursive(input = 8) do
+    for i <- 1..5, into: "" do
+      String.duplicate(" 42 ", i) <> "|"
+    end
+    |> String.trim_trailing("|")
+  end
+
+  defp spoof_recursive(input = 11) do
+    for i <- 1..5, into: "" do
+      String.duplicate(" 42 ", i) <> String.duplicate(" 31 ", i) <> "|"
+    end
+    |> String.trim_trailing("|")
+  end
+
+  defp spoof_recursive(input), do: input
 
   defp parse_rules(input) do
     rule_names = Enum.map(input, fn r -> String.split(r, ":") |> List.first() end)
@@ -69,4 +114,6 @@ defmodule Advent do
   end
 end
 
-IO.puts("Part 1: #{Advent.part_1()}")
+Advent.part_2()
+# IO.puts("Part 1: #{Advent.part_1()}")
+# Advent.spoof_recursive(8) |> Z.debug()
