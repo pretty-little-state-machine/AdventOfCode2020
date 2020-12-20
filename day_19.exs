@@ -77,14 +77,14 @@ defmodule Advent do
   end
 
   defp spoof_recursive(input = 8) do
-    for i <- 1..5, into: "" do
+    for i <- 1..6, into: "" do
       String.duplicate(" 42 ", i) <> "|"
     end
     |> String.trim_trailing("|")
   end
 
   defp spoof_recursive(input = 11) do
-    for i <- 1..5, into: "" do
+    for i <- 1..6, into: "" do
       String.duplicate(" 42 ", i) <> String.duplicate(" 31 ", i) <> "|"
     end
     |> String.trim_trailing("|")
