@@ -28,20 +28,23 @@ defmodule Advent do
   @regex ~r{se|sw|ne|nw|e|w}
 
   def part_1() do
-    tiles =
-      parse_file()
-      |> Enum.map(&travel(&1))
-      |> Enum.reduce(%{}, fn t, acc ->
-        cur_tile = Map.get(acc, Hexa.to_key(t), t)
-        Map.put(acc, Hexa.to_key(cur_tile), cur_tile |> Hexa.flip())
-      end)
-      |> count_tiles()
-      |> Map.get(:black)
+    parse_file()
+    |> get_initial_tilestate()
+    |> count_tiles()
+    |> Map.get(:black)
+  end
+
+  def get_initial_tilestate(tiles) do
+    Enum.map(tiles, &travel(&1))
+    |> Enum.reduce(%{}, fn t, acc ->
+      # Use the accumulator version of the tile if present
+      cur_tile = Map.get(acc, Hexa.to_key(t), t)
+      Map.put(acc, Hexa.to_key(cur_tile), cur_tile |> Hexa.flip())
+    end)
   end
 
   def count_tiles(tiles) do
-    tiles
-    |> Enum.reduce(%{black: 0, white: 0}, fn {_, t}, acc ->
+    Enum.reduce(tiles, %{black: 0, white: 0}, fn {_, t}, acc ->
       if t.color == :black do
         %{acc | black: acc.black + 1}
       else
@@ -53,11 +56,8 @@ defmodule Advent do
   def travel(path),
     do: Enum.reduce(path, Hexa.new(), fn m, hex -> Hexa.move(hex, m) end)
 
-  @doc """
-  Returns a list of lists. Each list contains the movements as atoms.
-  [[:w, :se, :w, :e, :e], [:ne, :se, :e, :e]]
-  """
   def parse_file() do
+    # [[:w, :se, :w, :e, :e], [:ne, :se, :e, :e]]
     Z.file_to_list("files/day_24_input.txt")
     |> Enum.map(fn s ->
       Regex.scan(@regex, s)
