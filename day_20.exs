@@ -51,17 +51,12 @@ defmodule Block do
       b1.bottom == b2.top -> {true, :bottom}
       b1.right == b2.left -> {true, :right}
       b1.left == b2.right -> {true, :left}
-      #  b1.top == b2.bottom -> {true, :top}
+      b1.top == b2.bottom -> {true, :top}
       true -> {false, nil}
     end
   end
 
   def nop(b = %Block{}), do: b
-
-  def mirror(b = %Block{}) do
-    mirrored_content = Enum.map(b.content, fn row -> String.reverse(row) end)
-    Map.replace(b, :content, mirrored_content) |> update_edges()
-  end
 
   def flip(b = %Block{}) do
     flipped_content = b.content |> Enum.reverse()
@@ -75,12 +70,6 @@ defmodule Block do
   def rot90_flip(b = %Block{}), do: b |> rotate_90() |> flip() |> update_edges()
   def rot180_flip(b = %Block{}), do: b |> rotate_180() |> flip() |> update_edges()
   def rot270_flip(b = %Block{}), do: b |> rotate_270() |> flip() |> update_edges()
-
-  def rot90_mirror(b = %Block{}), do: b |> rotate_90() |> mirror() |> update_edges()
-  def rot180_mirror(b = %Block{}), do: b |> rotate_180() |> mirror() |> update_edges()
-  def rot270_mirror(b = %Block{}), do: b |> rotate_270() |> mirror() |> update_edges()
-
-  def mirror_flip(b = %Block{}), do: b |> flip() |> mirror() |> update_edges()
 
   def trim_block(b = %Block{}) do
     new_content =
@@ -172,6 +161,7 @@ defmodule Advent do
   @cryptid_0 ~r/[#.]{18}#[#.]/
   @cryptid_1 ~r/(#)[#.]{4}##[#.]{4}##[#.]{4}###/
   @cryptid_2 ~r/[#.]#[#.]{2}#[#.]{2}#[#.]{2}#[#.]{2}#[#.]{2}#[#.]{3}/
+  @crypted_hashes 15
 
   @doc """
   Advent Day 20
@@ -208,11 +198,18 @@ defmodule Advent do
       |> Block.flip()
       |> Block.rotate_90()
 
-    # |> Block.rot90_flip()
-
     Block.print(sea)
     sea_width = sea |> Map.get(:top) |> String.length()
-    scan_for_cryptids(sea.content, sea_width, 0) |> Z.debug()
+    cryptids = scan_for_cryptids(sea.content, sea_width, 0) |> Z.debug()
+
+    hashes =
+      sea.content
+      |> Enum.join("")
+      |> String.graphemes()
+      |> Enum.frequencies()
+      |> Map.get("#")
+
+    hashes - cryptids * @crypted_hashes
   end
 
   def scan_for_cryptids([first, second, third | rest], sea_width, count) do
@@ -267,10 +264,8 @@ defmodule Advent do
       end)
 
     if all_visited?(blocks) do
-      Enum.count(blocks, fn b -> b.visited end) |> Z.debug()
       build_mosiac(new_blocks, :done, acc + 1)
     else
-      Enum.count(blocks, fn b -> b.visited end) |> Z.debug()
       build_mosiac(new_blocks, nil, acc + 1)
     end
   end
@@ -289,14 +284,6 @@ defmodule Advent do
       &Block.flip_90/1,
       &Block.flip_180/1,
       &Block.flip_270/1
-      #  &Block.rot90_flip/1,
-      #   &Block.rot180_flip/1,
-      #  &Block.rot270_flip/1,
-      #  &Block.rot90_mirror/1,
-      #  &Block.rot180_mirror/1,
-      #  &Block.rot270_mirror/1,
-      #    &Block.mirror/1,
-      #    &Block.mirror_flip/1
     ]
 
     Enum.reduce(blocks, [], fn b, acc ->
@@ -329,8 +316,8 @@ defmodule Advent do
     {test, adj} = Block.is_adjacent(cur_block, b_test)
 
     if test do
-      IO.write("#{cur_block.id} (#{cur_block.x}, #{cur_block.y})")
-      IO.puts(": MATCH! #{b_test.id} : #{adj}")
+      #  IO.write("#{cur_block.id} (#{cur_block.x}, #{cur_block.y})")
+      # IO.puts(": MATCH! #{b_test.id} : #{adj}")
 
       cond do
         adj == :top -> [b_test |> Block.set_coords(cur_block.x, cur_block.y + 1)]
@@ -375,4 +362,4 @@ defmodule Advent do
 end
 
 # IO.puts("Part 1: #{Advent.part_1()}")
-Advent.part_2()
+IO.puts("Part 2: #{Advent.part_2()}")
