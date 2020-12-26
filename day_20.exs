@@ -48,20 +48,39 @@ defmodule Block do
 
   def is_adjacent(b1 = %Block{}, b2 = %Block{}) do
     cond do
-      # b1.top == b2.bottom -> {true, :top}
       b1.bottom == b2.top -> {true, :bottom}
       b1.right == b2.left -> {true, :right}
       b1.left == b2.right -> {true, :left}
+      #  b1.top == b2.bottom -> {true, :top}
       true -> {false, nil}
     end
   end
 
   def nop(b = %Block{}), do: b
 
+  def mirror(b = %Block{}) do
+    mirrored_content = Enum.map(b.content, fn row -> String.reverse(row) end)
+    Map.replace(b, :content, mirrored_content) |> update_edges()
+  end
+
   def flip(b = %Block{}) do
     flipped_content = b.content |> Enum.reverse()
     Map.replace(b, :content, flipped_content) |> update_edges()
   end
+
+  def flip_90(b = %Block{}), do: b |> flip() |> rotate_90() |> update_edges()
+  def flip_180(b = %Block{}), do: b |> flip() |> rotate_180() |> update_edges()
+  def flip_270(b = %Block{}), do: b |> flip() |> rotate_270() |> update_edges()
+
+  def rot90_flip(b = %Block{}), do: b |> rotate_90() |> flip() |> update_edges()
+  def rot180_flip(b = %Block{}), do: b |> rotate_180() |> flip() |> update_edges()
+  def rot270_flip(b = %Block{}), do: b |> rotate_270() |> flip() |> update_edges()
+
+  def rot90_mirror(b = %Block{}), do: b |> rotate_90() |> mirror() |> update_edges()
+  def rot180_mirror(b = %Block{}), do: b |> rotate_180() |> mirror() |> update_edges()
+  def rot270_mirror(b = %Block{}), do: b |> rotate_270() |> mirror() |> update_edges()
+
+  def mirror_flip(b = %Block{}), do: b |> flip() |> mirror() |> update_edges()
 
   def trim_block(b = %Block{}) do
     new_content =
@@ -149,6 +168,11 @@ defmodule Block do
 end
 
 defmodule Advent do
+  @cryptid_width 20
+  @cryptid_0 ~r/[#.]{18}#[#.]/
+  @cryptid_1 ~r/(#)[#.]{4}##[#.]{4}##[#.]{4}###/
+  @cryptid_2 ~r/[#.]#[#.]{2}#[#.]{2}#[#.]{2}#[#.]{2}#[#.]{2}#[#.]{3}/
+
   @doc """
   Advent Day 20
   """
@@ -164,51 +188,120 @@ defmodule Advent do
       parse("files/day_20_input.txt")
       |> count_unmatched_edges()
 
-    start = blocks |> List.first() |> Block.flip() |> Block.set_coords(0, 0)
+    start =
+      blocks
+      |> List.first()
+      |> Block.flip()
+      |> Block.set_coords(0, 0)
+
+    # |> Block.set_xform(&Block.flip/1)
+
     blocks = blocks |> Block.replace_block(start)
 
     IO.puts("Starting block: #{start.id} ")
-    recurse(blocks, nil, 1)
+
+    sea =
+      build_mosiac(blocks, nil, 1)
+      |> Z.debug()
+      |> Enum.map(&Block.trim_block(&1))
+      |> build_sea()
+      |> Block.flip()
+      |> Block.rotate_90()
+
+    # |> Block.rot90_flip()
+
+    Block.print(sea)
+    sea_width = sea |> Map.get(:top) |> String.length()
+    scan_for_cryptids(sea.content, sea_width, 0) |> Z.debug()
   end
 
-  def recurse(blocks, :done, _), do: blocks |> Z.debug()
-
-  def recurse(blocks, _, 100_000) do
-    blocks |> Z.debug()
-    IO.puts("Break - Recursive Limit")
+  def scan_for_cryptids([first, second, third | rest], sea_width, count) do
+    count = count + scan_row(first, second, third, sea_width)
+    scan_for_cryptids([second, third] ++ rest, sea_width, count)
   end
 
-  def recurse(blocks, _, acc) do
+  def scan_for_cryptids(_, _, count), do: count
+
+  def scan_row(first, second, third, sea_width) do
+    for i <- 0..(sea_width - @cryptid_width), into: [] do
+      found =
+        Regex.match?(@cryptid_0, String.slice(first, i..(@cryptid_width + i - 1))) and
+          Regex.match?(@cryptid_1, String.slice(second, i..(@cryptid_width + i - 1))) and
+          Regex.match?(@cryptid_2, String.slice(third, i..(@cryptid_width + i - 1)))
+
+      if found, do: 1, else: 0
+    end
+    |> Enum.sum()
+  end
+
+  def build_sea(blocks) do
+    block_height = blocks |> List.first() |> Map.get(:content) |> Kernel.length()
+    x_min = Enum.map(blocks, fn block -> block.x end) |> Enum.min()
+    x_max = Enum.map(blocks, fn block -> block.x end) |> Enum.max()
+    y_min = Enum.map(blocks, fn block -> block.y end) |> Enum.min()
+    y_max = Enum.map(blocks, fn block -> block.y end) |> Enum.max()
+
+    sea_content =
+      for y <- y_max..y_min do
+        for r <- 0..(block_height - 1), into: "" do
+          for x <- x_min..x_max, into: "" do
+            block = Enum.find(blocks, fn block -> block.x == x and block.y == y end)
+            Map.get(block, :content) |> Enum.at(r)
+          end <> "\n"
+        end
+      end
+      |> Enum.join("")
+      |> String.split("\n")
+      |> Enum.reject(fn s -> s == "" end)
+
+    Block.new(id: :sea, content: sea_content)
+  end
+
+  def build_mosiac(blocks, :done, _), do: blocks
+  def build_mosiac(blocks, _, 1000), do: blocks
+
+  def build_mosiac(blocks, _, acc) do
     new_blocks =
       Enum.reduce(blocks, blocks, fn b, acc ->
         find_adjacencies(acc, b)
       end)
 
     if all_visited?(blocks) do
-      recurse(new_blocks, :done, acc + 1)
+      Enum.count(blocks, fn b -> b.visited end) |> Z.debug()
+      build_mosiac(new_blocks, :done, acc + 1)
     else
-      recurse(new_blocks, nil, acc + 1)
+      Enum.count(blocks, fn b -> b.visited end) |> Z.debug()
+      build_mosiac(new_blocks, nil, acc + 1)
     end
   end
 
-  def all_visited?(blocks) do
-    Enum.all?(blocks, fn x -> x.found end)
-  end
+  def all_visited?(blocks), do: Enum.all?(blocks, fn b -> b.visited end)
 
-  defp find_adjacencies(blocks, cur_block = %Block{found: false}), do: blocks
+  defp find_adjacencies(blocks, %Block{found: false}), do: blocks
 
-  defp find_adjacencies(blocks, cur_block) do
+  defp find_adjacencies(blocks, cur_block = %{visited: false}) do
     ops = [
       &Block.nop/1,
       &Block.rotate_90/1,
       &Block.rotate_180/1,
       &Block.rotate_270/1,
-      &Block.flip/1
+      &Block.flip/1,
+      &Block.flip_90/1,
+      &Block.flip_180/1,
+      &Block.flip_270/1
+      #  &Block.rot90_flip/1,
+      #   &Block.rot180_flip/1,
+      #  &Block.rot270_flip/1,
+      #  &Block.rot90_mirror/1,
+      #  &Block.rot180_mirror/1,
+      #  &Block.rot270_mirror/1,
+      #    &Block.mirror/1,
+      #    &Block.mirror_flip/1
     ]
 
     Enum.reduce(blocks, [], fn b, acc ->
       r =
-        if b.id != cur_block.id and !cur_block.visited do
+        if b.id != cur_block.id do
           Enum.reduce(ops, [], fn o, o_acc ->
             o_acc ++ test_block(b, cur_block, o)
           end)
@@ -227,13 +320,9 @@ defmodule Advent do
     |> Block.replace_block(Block.set_visited(cur_block))
   end
 
-  # defp filter_blocks(blocks, blocks_to_remove) do
-  #  ids_to_remove = Enum.map(blocks_to_remove, fn b -> b.id end)
-  #
-  #   Enum.reduce(blocks, [], fn b, acc ->
-  #    acc ++ if b.id in ids_to_remove, do: [], else: [b]
-  #   end)
-  # end
+  defp find_adjacencies(blocks, %Block{}), do: blocks
+
+  defp test_block(%Block{visited: true}, _, _), do: []
 
   defp test_block(b, cur_block, func) do
     b_test = func.(b)
